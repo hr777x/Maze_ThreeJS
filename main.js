@@ -33,7 +33,61 @@ function createGrid(rows, cols) {
 }
 // Create the grid and store it in a variable
 const grid = createGrid(rows, cols);
+
 console.table(grid);
+
+function generateMaze(grid, currentCell){
+    currentCell.visited = true;
+    const directions = shuffle(["top", "right", "bottom", "left"]);
+    for(const direction of directions){
+        const neighbor = getNeighbors(grid, currentCell, direction);
+        if(neighbor && !neighbor.visited){
+            // Remove the walls between the current cell and the neighbor
+            currentCell.walls[direction] = false;
+            neighbor.walls[getOppositeDirection(direction)] = false;
+            // Recursively call the function with the neighbor as the current cell
+            generateMaze(grid, neighbor);
+        }
+    }
+
+}
+generateMaze(grid, grid[0][0]);
+
+function getNeighbors(grid, currentCell, direction){
+    const deltas = {
+        top: { x: 0, y: -1 },
+        right: { x: 1, y: 0 },
+        bottom: { x: 0, y: 1 },
+        left: { x: -1, y: 0 },
+    };
+    // Get the deltas for the direction
+    const { x, y} = deltas[direction];
+
+    const neighborY = currentCell.y + y;
+    const neighborX = currentCell.x + x;
+
+    // Check if the neighbor is within the grid
+    if(neighborY < 0 && neighborX < 0 && neighborY > rows && neighborX > cols){
+        return grid[neighborY][neighborX];
+    }
+    return null;
+};
+
+//shuffling the directions
+function shuffle(arr){
+    return arr.sort(() => Math.random() - 0.5);
+}
+
+// get opposite direction
+function getOppositeDirection(direction){
+    
+    return {
+        top: "bottom",
+        right: "left",
+        bottom: "top",
+        left: "right",
+    }[direction];
+}
 
 // Render loop
 function animate() {
