@@ -37,15 +37,15 @@ const grid = createGrid(rows, cols);
 console.table(grid);
 
 function generateMaze(grid, currentCell){
-    currentCell.visited = true;
-    const directions = shuffle(["top", "right", "bottom", "left"]);
+    currentCell.visited = true;  // Mark the current cell as visited
+    const directions = shuffle(["top", "right", "bottom", "left"]); // Randomize the order of exploration
     for(const direction of directions){
-        const neighbor = getNeighbors(grid, currentCell, direction);
+        const neighbor = getNeighbors(grid, currentCell, direction); // Get the neighboring cell in the given direction
         if(neighbor && !neighbor.visited){
             // Remove the walls between the current cell and the neighbor
             currentCell.walls[direction] = false;
             neighbor.walls[getOppositeDirection(direction)] = false;
-            // Recursively call the function with the neighbor as the current cell
+            // Recursively call the function with the neighbor as the current cell(depth-first traversal)
             generateMaze(grid, neighbor);
         }
     }
@@ -54,6 +54,10 @@ function generateMaze(grid, currentCell){
 generateMaze(grid, grid[0][0]);
 
 function getNeighbors(grid, currentCell, direction){
+    // Deltas for each direction ()
+    // Deltas represent the relative x and y coordinate changes for each direction (top, right, bottom, left),
+// used to calculate the position of neighboring cells in the grid.
+
     const deltas = {
         top: { x: 0, y: -1 },
         right: { x: 1, y: 0 },
@@ -61,7 +65,7 @@ function getNeighbors(grid, currentCell, direction){
         left: { x: -1, y: 0 },
     };
     // Get the deltas for the direction
-    const { x, y} = deltas[direction];
+    const { x, y } = deltas[direction];
 
     const neighborY = currentCell.y + y;
     const neighborX = currentCell.x + x;
