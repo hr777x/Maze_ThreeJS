@@ -1,6 +1,19 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import CannonDebugger from "cannon-es-debugger";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+
+
+// Grid dimensions
+const rows = 10;
+const cols = 10;
+const cellSize = 1;
+
+//Global declarations for the sphere mesh and body
+let sphereMesh;
+let sphereBody;
+let wall
+let wallBody
 
 // Scene, Camera, and Renderer setup
 const scene = new THREE.Scene();
@@ -9,18 +22,17 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// Camera position
+camera.position.set(-4, 14, -4);
+camera.rotation.set(45, 0,  0);
+// camera.lookAt(cols / 2, 0, rows / 2);
+
+//adding directional light
+const dirLight = new THREE.DirectionalLight(0xffffff,5);
+scene.add(dirLight);
+dirLight.position.set(0, 10, -8);
 //Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement);
-
-// Grid dimensions
-const rows = 10;
-const cols = 10;
-const cellSize = 1;
-
-//Player Ball
-let sphereMesh;
-let sphereBody;
-
 
 // Create the maze grid
 function createGrid(rows, cols) {
@@ -108,24 +120,42 @@ function getOppositeDirection(direction){
 renderer.setAnimationLoop(animate);
 // Visualize the maze in Three.js
 function addWall(x, y, direction) {
+  //ThreeJs
     const geometry = new THREE.BoxGeometry(cellSize, cellSize / 2, 0.1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x444444 });
-    const wall = new THREE.Mesh(geometry, material);
-  
+    const material = new THREE.MeshBasicMaterial({ color: 0xFDA291 });
+    wall = new THREE.Mesh(geometry, material);
+
+  //CannonJs
+  const wallshape = new CANNON.Box(new CANNON.Vec3(cellSize/2, cellSize/4, 0.05))
+  wallBody = new CANNON.Body({
+    mass: 0,
+    shape: wallshape,
+    material: physicsMaterial
+  });
     switch (direction) {
       case "top":
         wall.position.set(x, 0, y - cellSize / 2);
+        physicsWorld.addBody(wallBody)
+        wallBody.position.set(x, 0, y - cellSize / 2);
         break;
       case "right":
         wall.position.set(x + cellSize / 2, 0, y);
         wall.rotation.y = Math.PI / 2;
+        physicsWorld.addBody(wallBody)
+        wallBody.position.set(x + cellSize / 2, 0, y);
+        wallBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), Math.PI / 2);
         break;
       case "bottom":
         wall.position.set(x, 0, y + cellSize / 2);
+        physicsWorld.addBody(wallBody)
+        wallBody.position.set(x, 0, y + cellSize / 2);
         break;
       case "left":
         wall.position.set(x - cellSize / 2, 0, y);
         wall.rotation.y = Math.PI / 2;
+        physicsWorld.addBody(wallBody)
+        wallBody.position.set(x - cellSize / 2, 0, y);
+        wallBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), Math.PI / 2);
         break;
     }
   
@@ -134,7 +164,7 @@ function addWall(x, y, direction) {
   
   function addFloor(x, y) {
     const geometry = new THREE.PlaneGeometry(cellSize, cellSize);
-    const material = new THREE.MeshBasicMaterial({ color: 0x999999, side: THREE.DoubleSide });
+    const material = new THREE.MeshBasicMaterial({ color: 0xCCCCCC, side: THREE.DoubleSide });
     const floor = new THREE.Mesh(geometry, material);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(x, -cellSize / 4, y);
@@ -158,8 +188,12 @@ function addWall(x, y, direction) {
 
   //setting up the physics world (cannon-es)
   const physicsWorld = new CANNON.World({gravity: new CANNON.Vec3(0, -9.82, 0)});
+
+  const physicsMaterial = new CANNON.Material({friction: 0.4});
+
+  // const cannondebug = new CannonDebugger(scene, physicsWorld);
   
-  //create a static ground plane
+  //creating a static ground plane
   const groundBody = new CANNON.Body({
       mass: 0,
       shape: new CANNON.Plane(),
@@ -167,12 +201,15 @@ function addWall(x, y, direction) {
   groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
   physicsWorld.addBody(groundBody);
   groundBody.position.set(0,-0.25,0);
+  
+  const axisHelper = new THREE.AxesHelper(5);
+  scene.add(axisHelper);
 
 
   function createSphere(x, y) {
     //Three.js World
     const geometry = new THREE.SphereGeometry(0.3, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
     sphereMesh = new THREE.Mesh(geometry, material);
     sphereMesh.position.set(x, 5, y);
     scene.add(sphereMesh);
@@ -183,23 +220,60 @@ function addWall(x, y, direction) {
       mass: 1,
       position: new CANNON.Vec3(x, 5, y),
       shape,
+      material: physicsMaterial,
+      linearDamping: 0.5
     });
     physicsWorld.addBody(sphereBody);
 
   }
+
+  document.addEventListener("keydown", (e) => {
+
+    const force = 4;
+
+    switch(e.key){
+        case "ArrowUp":
+            sphereBody.applyImpulse(new CANNON.Vec3(0, 0, force), sphereBody.rotation);
+            break;
+        case "ArrowDown":
+            sphereBody.applyImpulse(new CANNON.Vec3(0, 0, -force), sphereBody.rotation);
+            break;
+        case "ArrowLeft":
+            sphereBody.applyImpulse(new CANNON.Vec3(force, 0, 0), sphereBody.rotation);
+            break;
+        case "ArrowRight":
+            sphereBody.applyImpulse(new CANNON.Vec3(-force, 0, 0), sphereBody.rotation);
+            break;
+    }
+  });
+
+  document.addEventListener("keyup", (e) => {
+
+    switch(e.key){
+        case "ArrowUp":
+        case "ArrowDown":
+            sphereBody.velocity.z = 0;
+            break;
+        case "ArrowLeft":
+        case "ArrowRight":
+            sphereBody.velocity.x = 0;
+            break;
+    }
+  });
+
   
   visualizeMaze(grid);
   createSphere(0, 0);
-  // Camera position
-  camera.position.set(cols / 2, rows, rows * 1.5);
-  camera.lookAt(cols / 2, 0, rows / 2);
+
+  
 
   function animate() {
-    requestAnimationFrame(animate);
+    // requestAnimationFrame(animate);
     controls.update();
-    physicsWorld.fixedStep(1 / 60);
+    physicsWorld.fixedStep();
     sphereMesh.position.copy(sphereBody.position);
     sphereMesh.quaternion.copy(sphereBody.quaternion);
+    // cannondebug.update();
     renderer.render(scene, camera);
   }
 
