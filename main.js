@@ -1,5 +1,5 @@
 import * as THREE from "three";
-
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 // Scene, Camera, and Renderer setup
 const scene = new THREE.Scene();
@@ -8,9 +8,13 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+//Orbit Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+
 // Grid dimensions
 const rows = 10;
 const cols = 10;
+const cellSize = 1;
 
 // Create the maze grid
 function createGrid(rows, cols) {
@@ -71,7 +75,7 @@ function getNeighbors(grid, currentCell, direction){
     const neighborX = currentCell.x + x;
 
     // Check if the neighbor is within the grid
-    if(neighborY < 0 && neighborX < 0 && neighborY > rows && neighborX > cols){
+    if(neighborY >= 0 && neighborX >= 0 && neighborY < rows && neighborX < cols){
         return grid[neighborY][neighborX];
     }
     return null;
@@ -96,9 +100,64 @@ function getOppositeDirection(direction){
 // Render loop
 function animate() {
   requestAnimationFrame(animate);
+  controls.update();
   renderer.render(scene, camera);
 }
 renderer.setAnimationLoop(animate);
+// Visualize the maze in Three.js
+function addWall(x, y, direction) {
+    const geometry = new THREE.BoxGeometry(cellSize, cellSize / 2, 0.1);
+    const material = new THREE.MeshBasicMaterial({ color: 0x444444 });
+    const wall = new THREE.Mesh(geometry, material);
+  
+    switch (direction) {
+      case "top":
+        wall.position.set(x, 0, y - cellSize / 2);
+        break;
+      case "right":
+        wall.position.set(x + cellSize / 2, 0, y);
+        wall.rotation.y = Math.PI / 2;
+        break;
+      case "bottom":
+        wall.position.set(x, 0, y + cellSize / 2);
+        break;
+      case "left":
+        wall.position.set(x - cellSize / 2, 0, y);
+        wall.rotation.y = Math.PI / 2;
+        break;
+    }
+  
+    scene.add(wall);
+  }
+  
+  function addFloor(x, y) {
+    const geometry = new THREE.PlaneGeometry(cellSize, cellSize);
+    const material = new THREE.MeshBasicMaterial({ color: 0x999999, side: THREE.DoubleSide });
+    const floor = new THREE.Mesh(geometry, material);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(x, -cellSize / 4, y);
+    scene.add(floor);
+  }
+  
+  function visualizeMaze(grid) {
+    for (const row of grid) {
+      for (const cell of row) {
+        const { x, y, walls } = cell;
+  
+        if (walls.top) addWall(x, y, "top");
+        if (walls.right) addWall(x, y, "right");
+        if (walls.bottom) addWall(x, y, "bottom");
+        if (walls.left) addWall(x, y, "left");
+  
+        addFloor(x, y);
+      }
+    }
+  }
+  
+  visualizeMaze(grid);
+  // Camera position
+  camera.position.set(cols / 2, rows, rows * 1.5);
+  camera.lookAt(cols / 2, 0, rows / 2);
 
 
 
