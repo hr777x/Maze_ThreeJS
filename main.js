@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as CANNON from "cannon-es";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 // Scene, Camera, and Renderer setup
@@ -15,6 +16,11 @@ const controls = new OrbitControls(camera, renderer.domElement);
 const rows = 10;
 const cols = 10;
 const cellSize = 1;
+
+//Player Ball
+let sphereMesh;
+let sphereBody;
+
 
 // Create the maze grid
 function createGrid(rows, cols) {
@@ -98,11 +104,7 @@ function getOppositeDirection(direction){
 }
 
 // Render loop
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
+
 renderer.setAnimationLoop(animate);
 // Visualize the maze in Three.js
 function addWall(x, y, direction) {
@@ -153,11 +155,51 @@ function addWall(x, y, direction) {
       }
     }
   }
+
+  //setting up the physics world (cannon-es)
+  const physicsWorld = new CANNON.World({gravity: new CANNON.Vec3(0, -9.82, 0)});
+  
+  //create a static ground plane
+  const groundBody = new CANNON.Body({
+      mass: 0,
+      shape: new CANNON.Plane(),
+  });
+  groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+  physicsWorld.addBody(groundBody);
+  groundBody.position.set(0,-0.25,0);
+
+
+  function createSphere(x, y) {
+    //Three.js World
+    const geometry = new THREE.SphereGeometry(0.3, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    sphereMesh = new THREE.Mesh(geometry, material);
+    sphereMesh.position.set(x, 5, y);
+    scene.add(sphereMesh);
+
+    //Cannon.js World
+    const shape = new CANNON.Sphere(0.3);
+    sphereBody = new CANNON.Body({
+      mass: 1,
+      position: new CANNON.Vec3(x, 5, y),
+      shape,
+    });
+    physicsWorld.addBody(sphereBody);
+
+  }
   
   visualizeMaze(grid);
+  createSphere(0, 0);
   // Camera position
   camera.position.set(cols / 2, rows, rows * 1.5);
   camera.lookAt(cols / 2, 0, rows / 2);
 
-
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    physicsWorld.fixedStep(1 / 60);
+    sphereMesh.position.copy(sphereBody.position);
+    sphereMesh.quaternion.copy(sphereBody.quaternion);
+    renderer.render(scene, camera);
+  }
 
