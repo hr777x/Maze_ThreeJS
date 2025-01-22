@@ -25,7 +25,6 @@ document.body.appendChild(renderer.domElement);
 // Camera position
 camera.position.set(-4, 14, -4);
 camera.rotation.set(45, 0,  0);
-// camera.lookAt(cols / 2, 0, rows / 2);
 
 //adding directional light
 const dirLight = new THREE.DirectionalLight(0xffffff,5);
@@ -122,15 +121,14 @@ renderer.setAnimationLoop(animate);
 function addWall(x, y, direction) {
   //ThreeJs
     const geometry = new THREE.BoxGeometry(cellSize, cellSize / 2, 0.1);
-    const material = new THREE.MeshBasicMaterial({ color: 0xFDA291 });
+    const material = new THREE.MeshStandardMaterial({ color: 0x91ECFD });
     wall = new THREE.Mesh(geometry, material);
 
   //CannonJs
   const wallshape = new CANNON.Box(new CANNON.Vec3(cellSize/2, cellSize/4, 0.05))
   wallBody = new CANNON.Body({
     mass: 0,
-    shape: wallshape,
-    material: physicsMaterial
+    shape: wallshape
   });
     switch (direction) {
       case "top":
@@ -155,6 +153,7 @@ function addWall(x, y, direction) {
         wall.rotation.y = Math.PI / 2;
         physicsWorld.addBody(wallBody)
         wallBody.position.set(x - cellSize / 2, 0, y);
+        // Rotate the wall to be vertical
         wallBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), Math.PI / 2);
         break;
     }
@@ -164,14 +163,15 @@ function addWall(x, y, direction) {
   
   function addFloor(x, y) {
     const geometry = new THREE.PlaneGeometry(cellSize, cellSize);
-    const material = new THREE.MeshBasicMaterial({ color: 0xCCCCCC, side: THREE.DoubleSide });
+    const material = new THREE.MeshStandardMaterial({ color: 0xFDEC91, side: THREE.DoubleSide });
     const floor = new THREE.Mesh(geometry, material);
-    floor.rotation.x = -Math.PI / 2;
+    floor.rotation.x = -Math.PI / 2; // Rotate the floor to be horizontal pi = 180 degrees
     floor.position.set(x, -cellSize / 4, y);
     scene.add(floor);
   }
   
   function visualizeMaze(grid) {
+    // Loop through each cell in the grid
     for (const row of grid) {
       for (const cell of row) {
         const { x, y, walls } = cell;
@@ -187,29 +187,29 @@ function addWall(x, y, direction) {
   }
 
   //setting up the physics world (cannon-es)
-  const physicsWorld = new CANNON.World({gravity: new CANNON.Vec3(0, -9.82, 0)});
+  const physicsWorld = new CANNON.World({gravity: new CANNON.Vec3(0, -9.82, 0)}); //setting gravity
 
-  const physicsMaterial = new CANNON.Material({friction: 0.4});
 
   // const cannondebug = new CannonDebugger(scene, physicsWorld);
   
   //creating a static ground plane
   const groundBody = new CANNON.Body({
       mass: 0,
-      shape: new CANNON.Plane(),
+      shape: new CANNON.Plane()
   });
   groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
   physicsWorld.addBody(groundBody);
   groundBody.position.set(0,-0.25,0);
   
-  const axisHelper = new THREE.AxesHelper(5);
-  scene.add(axisHelper);
+  //helps to visualize the world axis
+  // const axisHelper = new THREE.AxesHelper(5);
+  // scene.add(axisHelper);
 
 
   function createSphere(x, y) {
     //Three.js World
     const geometry = new THREE.SphereGeometry(0.3, 32, 32);
-    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     sphereMesh = new THREE.Mesh(geometry, material);
     sphereMesh.position.set(x, 5, y);
     scene.add(sphereMesh);
@@ -220,35 +220,37 @@ function addWall(x, y, direction) {
       mass: 1,
       position: new CANNON.Vec3(x, 5, y),
       shape,
-      material: physicsMaterial,
-      linearDamping: 0.5
+      linearDamping: 0.3,
     });
+    //Add the sphere body to the physics world
     physicsWorld.addBody(sphereBody);
 
   }
 
-  document.addEventListener("keydown", (e) => {
+  
+    document.addEventListener("keydown", (e) => {
 
-    const force = 4;
+    const force = 40;
 
     switch(e.key){
         case "ArrowUp":
-            sphereBody.applyImpulse(new CANNON.Vec3(0, 0, force), sphereBody.rotation);
+          sphereBody.applyForce(new CANNON.Vec3(0, 0, force), sphereBody.rotation);
             break;
         case "ArrowDown":
-            sphereBody.applyImpulse(new CANNON.Vec3(0, 0, -force), sphereBody.rotation);
+            sphereBody.applyForce(new CANNON.Vec3(0, 0, -force), sphereBody.rotation);
             break;
         case "ArrowLeft":
-            sphereBody.applyImpulse(new CANNON.Vec3(force, 0, 0), sphereBody.rotation);
+            sphereBody.applyForce(new CANNON.Vec3(force, 0, 0), sphereBody.rotation);
             break;
         case "ArrowRight":
-            sphereBody.applyImpulse(new CANNON.Vec3(-force, 0, 0), sphereBody.rotation);
+          //Apply force to the right
+            sphereBody.applyForce(new CANNON.Vec3(-force , 0, 0), sphereBody.rotation);
             break;
     }
   });
 
   document.addEventListener("keyup", (e) => {
-
+    //on keyup, stop the sphere
     switch(e.key){
         case "ArrowUp":
         case "ArrowDown":
@@ -265,15 +267,22 @@ function addWall(x, y, direction) {
   visualizeMaze(grid);
   createSphere(0, 0);
 
+  function onWindowResize() {
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
   
+    renderer.setSize( window.innerWidth, window.innerHeight );
+  
+  }
 
   function animate() {
     // requestAnimationFrame(animate);
     controls.update();
-    physicsWorld.fixedStep();
+    physicsWorld.fixedStep();  //The physics world is updated in small, fixed intervals during each frame. Default is 1/60 seconds.
     sphereMesh.position.copy(sphereBody.position);
     sphereMesh.quaternion.copy(sphereBody.quaternion);
     // cannondebug.update();
+    onWindowResize();
     renderer.render(scene, camera);
   }
-
