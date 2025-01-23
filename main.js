@@ -75,7 +75,7 @@ function generateMaze(grid, currentCell){
 generateMaze(grid, grid[0][0]);
 
 function getNeighbors(grid, currentCell, direction){
-    // Deltas for each direction ()
+    // Deltas for each direction
     // Deltas represent the relative x and y coordinate changes for each direction (top, right, bottom, left),
 // used to calculate the position of neighboring cells in the grid.
 
@@ -271,7 +271,6 @@ function addWall(x, y, direction) {
 
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-  
     renderer.setSize( window.innerWidth, window.innerHeight );
   
   }
