@@ -234,17 +234,18 @@ function addWall(x, y, direction) {
 
     switch(e.key){
         case "ArrowUp":
-          sphereBody.applyForce(new CANNON.Vec3(0, 0, force), sphereBody.rotation);
+          //apply force to a body(direction, the point on the object where the force is applied)
+          sphereBody.applyForce(new CANNON.Vec3(0, 0, force), new CANNON.Vec3(0, 0, 0));
             break;
         case "ArrowDown":
-            sphereBody.applyForce(new CANNON.Vec3(0, 0, -force), sphereBody.rotation);
+            sphereBody.applyForce(new CANNON.Vec3(0, 0, -force), new CANNON.Vec3(0, 0, 0));
             break;
         case "ArrowLeft":
-            sphereBody.applyForce(new CANNON.Vec3(force, 0, 0), sphereBody.rotation);
+            sphereBody.applyForce(new CANNON.Vec3(force, 0, 0), new CANNON.Vec3(0, 0, 0));
             break;
         case "ArrowRight":
           //Apply force to the right
-            sphereBody.applyForce(new CANNON.Vec3(-force , 0, 0), sphereBody.rotation);
+            sphereBody.applyForce(new CANNON.Vec3(-force , 0, 0), new CANNON.Vec3(0, 0, 0));
             break;
     }
   });
