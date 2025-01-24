@@ -105,13 +105,13 @@ function shuffle(arr){
 
 // get opposite direction
 function getOppositeDirection(direction){
-    
-    return {
+    const oppositeDir = {
         top: "bottom",
         right: "left",
         bottom: "top",
-        left: "right",
-    }[direction];
+        left: "right"
+    }
+    return oppositeDir[direction];
 }
 
 // Render loop
